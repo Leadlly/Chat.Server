@@ -1,42 +1,35 @@
 import express from 'express';
 import http from 'http';
 import { Server } from 'socket.io';
-import Redis from 'ioredis';
+import connectDB from './db';
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-const redis = new Redis();
-const redisPublisher = new Redis();
-const redisSubscriber = new Redis();
+app.get('/', (req, res) => {
+  res.sendFile(__dirname + '/index.html');
+});
 
-redisSubscriber.subscribe('chat-messages');
-
-// Handle new WebSocket connections
 io.on('connection', (socket) => {
-  console.log('Client connected');
+  console.log('a user connected');
 
-  // Handle incoming messages
-  socket.on('sendMessage', (message: string) => {
-    console.log('Received message:', message);
-    redisPublisher.publish('chat-messages', message);
+  socket.on('join room', (phoneNumber: string) => {
+    socket.join(phoneNumber);
+    console.log(`User with ID: ${socket.id} joined room: ${phoneNumber}`);
   });
 
-  // Handle disconnection
+  socket.on('chat message', ({ room, message }: { room: string; message: string }) => {
+    io.to(room).emit('chat message', message);
+  });
+
   socket.on('disconnect', () => {
-    console.log('Client disconnected');
+    console.log('user disconnected');
   });
 });
 
-// Listen for messages from Redis
-redisSubscriber.on('message', (channel, message) => {
-  if (channel === 'chat-messages') {
-    io.emit('receiveMessage', message);
-  }
-});
-
-const PORT = 8080;
+const PORT = 3000;
+connectDB();
 server.listen(PORT, () => {
-  console.log(`Chat server listening on port ${PORT}`);
+  console.log(`listening on *:${PORT}`);
 });

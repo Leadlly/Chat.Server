@@ -1,3 +1,5 @@
 .env
+*.env
+.env.sample
 .local
-node_modules
+node_modules/
