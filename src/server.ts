@@ -1,35 +1,77 @@
 import express from 'express';
 import http from 'http';
 import { Server } from 'socket.io';
-import connectDB from './db';
+import ConnectToDB from './db';
+import chatRouter from './routes/chat.route';
+import cors from 'cors';
+import expressWinston from 'express-winston'
+import winston from 'winston'
+import { logger } from './utils/winstonLogger';
+
+ConnectToDB();
 
 const app = express();
-const server = http.createServer(app);
-const io = new Server(server);
 
-app.get('/', (req, res) => {
-  res.sendFile(__dirname + '/index.html');
+app.use(
+  expressWinston.logger({
+    transports: [new winston.transports.Console()],
+    format: winston.format.combine(
+      winston.format.colorize(),
+      winston.format.cli(),
+    ),
+    meta: true,
+    expressFormat: true,
+    colorize: true,
+  }),
+);
+
+
+app.use(express.json());
+app.use(cors({
+  origin:  ['http://localhost:3000', 'http://localhost:3001'],
+  credentials: true
+}));
+
+const server = http.createServer(app);
+export const io = new Server(server, {
+  cors: {
+    origin: ['http://localhost:3000', 'http://localhost:3001'],
+    methods: ['GET', 'POST'],
+    credentials: true,
+  },
 });
 
-io.on('connection', (socket) => {
-  console.log('a user connected');
+// Basic route to verify server is working
+app.get('/', (req, res) => {
+  res.send("Chat server is working fine");
+});
 
-  socket.on('join room', (phoneNumber: string) => {
-    socket.join(phoneNumber);
-    console.log(`User with ID: ${socket.id} joined room: ${phoneNumber}`);
+// API routes
+app.use('/api/chat', chatRouter);
+
+// Socket.IO connection handling
+io.on('connection', (socket) => {
+  // console.log(`New client connected: ${socket.id}`);
+
+  // Handle join room event
+  socket.on('join room', ({ useremail }) => {
+    console.log(`User with ID: ${socket.id} joining room: ${useremail}`);
+    socket.join(useremail);
   });
 
-  socket.on('chat message', ({ room, message }: { room: string; message: string }) => {
+  // Handle chat message event
+  socket.on('chat message', ({ room, message }) => {
     io.to(room).emit('chat message', message);
   });
 
+  // Handle disconnection
   socket.on('disconnect', () => {
-    console.log('user disconnected');
+    console.log(`User disconnected: ${socket.id}`);
   });
 });
 
-const PORT = 3000;
-connectDB();
+const PORT = 8000;
+
 server.listen(PORT, () => {
-  console.log(`listening on *:${PORT}`);
+  logger.info(`Server listening on port ${PORT}`);
 });

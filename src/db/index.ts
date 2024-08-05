@@ -1,19 +1,26 @@
-import mongoose from 'mongoose';
-import dotenv from 'dotenv';
+import mongoose from "mongoose";
+import dotenv from "dotenv";
 
-// Load environment variables from .env file
 dotenv.config();
 
-const mongoURI = process.env.MONGO_URL as string;
+let db: mongoose.Connection;
+let questions_db: mongoose.Connection;
 
-const connectDB = async () => {
+const ConnectToDB = async () => {
+  const DatabaseUrl = process.env.LEADLLY_DB_URL as string;
+  const questionsDbUrl = process.env.LEADLLY_QUESTIONS_DB_URL as string;
+
   try {
-    await mongoose.connect(mongoURI);
-    console.log('Connected to MongoDB');
-  } catch (err) {
-    console.error('Error connecting to MongoDB:', err);
-    process.exit(1); // Exit process with failure
+    await mongoose.connect(DatabaseUrl);
+    db = mongoose.connection;
+    console.log("Leadlly_DB Connected.");
+
+    questions_db = await mongoose.createConnection(questionsDbUrl);
+    console.log("Questions_DB Connected.");
+  } catch (error) {
+    console.log("Error connecting to databases:", error);
   }
 };
 
-export default connectDB;
+export { questions_db, db };
+export default ConnectToDB;
