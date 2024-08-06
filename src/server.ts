@@ -51,23 +51,27 @@ app.use('/api/chat', chatRouter);
 
 // Socket.IO connection handling
 io.on('connection', (socket) => {
-  // console.log(`New client connected: ${socket.id}`);
+  console.log(`New client connected: ${socket.id}`);
 
-  // Handle join room event
-  socket.on('join room', ({ useremail }) => {
+  socket.on('join_room', ({ useremail }) => {
     console.log(`User with ID: ${socket.id} joining room: ${useremail}`);
     socket.join(useremail);
   });
 
-  // Handle chat message event
-  socket.on('chat message', ({ room, message }) => {
+
+  socket.on('join_mentor_room', ({ useremail }) => {
+    console.log(`User with ID: ${socket.id} joining room: ${useremail}`);
+    socket.join(useremail);
+  });
+
+  socket.on('chat_message', ({ room, message }) => {
     io.to(room).emit('chat message', message);
   });
 
   // Handle disconnection
-  socket.on('disconnect', () => {
-    console.log(`User disconnected: ${socket.id}`);
-  });
+  // socket.on('disconnect', () => {
+  //   console.log(`User disconnected: ${socket.id}`);
+  // });
 });
 
 const PORT = 8000;
