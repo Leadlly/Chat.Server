@@ -1,12 +1,13 @@
 import express from 'express';
 import http from 'http';
 import { Server } from 'socket.io';
-import ConnectToDB from './db';
+import ConnectToDB, { db } from './db';
 import chatRouter from './routes/chat.route';
 import cors from 'cors';
 import expressWinston from 'express-winston'
 import winston from 'winston'
 import { logger } from './utils/winstonLogger';
+import { getStudentDetails } from './functions/getStudent';
 
 ConnectToDB();
 
@@ -53,19 +54,42 @@ app.use('/api/chat', chatRouter);
 io.on('connection', (socket) => {
   console.log(`New client connected: ${socket.id}`);
 
-  socket.on('join_room', ({ useremail }) => {
-    console.log(`User with ID: ${socket.id} joining room: ${useremail}`);
-    socket.join(useremail);
+  socket.on('join_room', ({ userEmail }) => {
+    console.log(`User with ID: ${socket.id} joining room: ${userEmail}`);
+    socket.join(userEmail);
   });
 
 
-  socket.on('join_mentor_room', ({ useremail }) => {
-    console.log(`User with ID: ${socket.id} joining room: ${useremail}`);
-    socket.join(useremail);
+  socket.on('join_mentor_room', ({ userEmail }) => {
+    socket.join(userEmail);
+    console.log(`User with ID: ${socket.id} joining mentor room: ${userEmail}`);
   });
 
-  socket.on('chat_message', ({ room, message }) => {
-    io.to(room).emit('chat message', message);
+  socket.on('chat_message', async ({ sender, message, timestamp, sendBy, room, studentId, socketId }) => {
+    console.log("Chat message received");
+
+    try {
+      if(studentId) {
+        const data = await getStudentDetails(studentId); 
+        if (data) {
+          socket.join(data.email)
+          // Emit the message to the room associated with the student's email
+          io.to(data.email).emit('room_message', { sender, message, timestamp, sendBy });
+          console.log(`message send to ${data.email} from ${socketId}` )
+        } else {
+          console.error('Student details not found or email is missing');
+          console.log(`message send to ${room} from ${socketId}` )
+
+        }
+      } else {
+        socket.join(room)
+
+        io.to(room).emit('room_message', { sender, message, timestamp, sendBy });
+      }
+   
+    } catch (error) {
+      console.error('Error handling chat message:', error);
+    }
   });
 
   // Handle disconnection

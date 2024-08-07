@@ -81,7 +81,7 @@ export const sendMessage = async (req: Request, res: Response, io: SocketIOServe
         const sender = sendBy === 'student' ? user.firstname : mentor.firstname; 
 
         // Emit message event to the mentor's room
-        io.emit('chat_message', { sender, message, timestamp, sendBy });
+        io.emit('chat_message', { sender, message, timestamp, sendBy, room: useremail });
 
         res.status(200).json({ message: 'Message sent successfully' });
     } catch (error) {
