@@ -7,7 +7,8 @@ import cors from 'cors';
 import expressWinston from 'express-winston'
 import winston from 'winston'
 import { logger } from './utils/winstonLogger';
-import { getStudentDetails } from './functions/getStudent';
+import errorMiddleware from './middleware/error'
+import { saveChats } from './functions/saveChats';
 
 ConnectToDB();
 
@@ -65,28 +66,11 @@ io.on('connection', (socket) => {
     console.log(`User with ID: ${socket.id} joining mentor room: ${userEmail}`);
   });
 
-  socket.on('chat_message', async ({ sender, message, timestamp, sendBy, room, studentId, socketId }) => {
-    console.log("Chat message received");
-
+  socket.on('chat_message', async ({ sender, receiver, message, timestamp, sendBy, room, socketId }) => {
+    console.log("Chat message received", sendBy);
     try {
-      if(studentId) {
-        const data = await getStudentDetails(studentId); 
-        if (data) {
-          socket.join(data.email)
-          // Emit the message to the room associated with the student's email
-          io.to(data.email).emit('room_message', { sender, message, timestamp, sendBy });
-          console.log(`message send to ${data.email} from ${socketId}` )
-        } else {
-          console.error('Student details not found or email is missing');
-          console.log(`message send to ${room} from ${socketId}` )
-
-        }
-      } else {
-        socket.join(room)
-
-        io.to(room).emit('room_message', { sender, message, timestamp, sendBy });
-      }
-   
+      io.to(room).emit('room_message', { message, timestamp, sendBy });
+      await saveChats(sender, receiver, message, room, sendBy)
     } catch (error) {
       console.error('Error handling chat message:', error);
     }
@@ -99,6 +83,8 @@ io.on('connection', (socket) => {
 });
 
 const PORT = 8000;
+
+app.use(errorMiddleware);
 
 server.listen(PORT, () => {
   logger.info(`Server listening on port ${PORT}`);
