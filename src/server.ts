@@ -9,6 +9,7 @@ import winston from 'winston'
 import { logger } from './utils/winstonLogger';
 import errorMiddleware from './middleware/error'
 import { saveChats } from './functions/saveChats';
+import { GroupMessage } from './types'
 
 ConnectToDB();
 
@@ -74,12 +75,33 @@ io.on('connection', (socket) => {
     console.log(`User with ID: ${socket.id} joining mentor room: ${userEmail}`);
   });
 
+  socket.on('join_group', ({ userEmails }) => {
+    userEmails.forEach((room: string) => {
+        socket.join(room);
+        console.log(`User with ID: ${socket.id} left room: ${room}`);
+    });
+  });
+
   socket.on('chat_message', async ({ sender, receiver, message, timestamp, sendBy, room, socketId }) => {
   
     try {
       io.to(room).emit('room_message', { message, timestamp, sendBy });
       console.log("Message send", room);
       await saveChats(sender, receiver, message, room, sendBy)
+    } catch (error) {
+      console.error('Error handling chat message:', error);
+    }
+  });
+
+  socket.on('group_chat_message', async ({ data, sender, message, timestamp, sendBy, socketId }: GroupMessage) => {
+  
+    try {
+      data.forEach(async(el) => {
+        io.to(el.room).emit('room_message', { message, timestamp, sendBy });
+        // console.log("Message send", room);
+        await saveChats(sender, el.receiver, message, el.room, sendBy)
+      });
+     
     } catch (error) {
       console.error('Error handling chat message:', error);
     }
