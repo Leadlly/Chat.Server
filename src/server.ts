@@ -55,21 +55,30 @@ app.use('/api/chat', chatRouter);
 io.on('connection', (socket) => {
   console.log(`New client connected: ${socket.id}`);
 
-  socket.on('join_room', ({ userEmail }) => {
-    console.log(`User with ID: ${socket.id} joining room: ${userEmail}`);
+  socket.on('student_joining_room', ({ userEmail }) => {
     socket.join(userEmail);
+    console.log(`User with ID: ${socket.id} joining room: ${userEmail}`);
   });
 
 
-  socket.on('join_mentor_room', ({ userEmail }) => {
+  socket.on('mentor_joining_room', ({ userEmail }) => {
+    // Leave any previous room the user might be in
+    const rooms = Array.from(socket.rooms);
+    rooms.forEach((room) => {
+        socket.leave(room);
+        console.log(`User with ID: ${socket.id} left room: ${room}`);
+    });
+
+    // Join the new room
     socket.join(userEmail);
     console.log(`User with ID: ${socket.id} joining mentor room: ${userEmail}`);
   });
 
   socket.on('chat_message', async ({ sender, receiver, message, timestamp, sendBy, room, socketId }) => {
-    console.log("Chat message received", sendBy);
+  
     try {
       io.to(room).emit('room_message', { message, timestamp, sendBy });
+      console.log("Message send", room);
       await saveChats(sender, receiver, message, room, sendBy)
     } catch (error) {
       console.error('Error handling chat message:', error);
@@ -77,9 +86,9 @@ io.on('connection', (socket) => {
   });
 
   // Handle disconnection
-  // socket.on('disconnect', () => {
-  //   console.log(`User disconnected: ${socket.id}`);
-  // });
+  socket.on('disconnect', () => {
+    console.log(`User disconnected: ${socket.id}`);
+  });
 });
 
 const PORT = 8000;

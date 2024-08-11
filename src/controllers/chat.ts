@@ -14,7 +14,6 @@ export const getChats = async (
     next: NextFunction
 ) => {
     try {
-        console.log(req.body, "here is the body")
         const { mentorId, studentId } = req.body;
          const { limit = 30, skip = 0 } = req.query
 
