@@ -76,6 +76,13 @@ io.on('connection', (socket) => {
   });
 
   socket.on('join_group', ({ userEmails }) => {
+
+    const rooms = Array.from(socket.rooms);
+    rooms.forEach((room) => {
+        socket.leave(room);
+        console.log(`User with ID: ${socket.id} left room: ${room}`);
+    });
+
     userEmails.forEach((room: string) => {
         socket.join(room);
         console.log(`User with ID: ${socket.id} left room: ${room}`);
@@ -98,9 +105,10 @@ io.on('connection', (socket) => {
     try {
       data.forEach(async(el) => {
         io.to(el.room).emit('room_message', { message, timestamp, sendBy });
-        // console.log("Message send", room);
-        await saveChats(sender, el.receiver, message, el.room, sendBy)
+        await saveChats(sender, el.receiver, message, el.room, sendBy, "announcement")
       });
+
+      io.emit("group_message", { message, timestamp, sendBy })
      
     } catch (error) {
       console.error('Error handling chat message:', error);

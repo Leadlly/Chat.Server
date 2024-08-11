@@ -8,6 +8,7 @@ const chatSchema = new mongoose.Schema({
   timestamp: { type: Date, default: Date.now },
   chatRoom: { type: String },
   senderName: { type: String },
+  chatType: String
 });
 
 export const Chat = mongoose.model('Chat', chatSchema);
