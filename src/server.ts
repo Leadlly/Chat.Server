@@ -10,6 +10,9 @@ import { logger } from './utils/winstonLogger';
 import errorMiddleware from './middleware/error'
 import { saveChats } from './functions/saveChats';
 import { GroupMessage } from './types'
+import { getUserInfo } from './functions/getUser';
+import { getUnreadMessages } from './functions/getUnreadMessage';
+import { resetUnreadMessageCount } from './functions/resetUnreadMessageCount';
 
 ConnectToDB();
 
@@ -93,8 +96,14 @@ io.on('connection', (socket) => {
   
     try {
       io.to(room).emit('room_message', { message, timestamp, sendBy });
-      console.log("Message send", room);
       await saveChats(sender, receiver, message, room, sendBy)
+      const user = await getUserInfo(receiver)
+      if (user.data) {
+        const unreadCount = await getUnreadMessages(receiver, room);
+
+        io.to(user.data.email).emit('notification', { room, messageCount: unreadCount }); // Emit notification event
+      }
+
     } catch (error) {
       console.error('Error handling chat message:', error);
     }
@@ -106,7 +115,14 @@ io.on('connection', (socket) => {
       data.forEach(async(el) => {
         io.to(el.room).emit('room_message', { message, timestamp, sendBy });
         await saveChats(sender, el.receiver, message, el.room, sendBy, "announcement")
-      });
+        const user = await getUserInfo(el.receiver)
+        if (user.data) {
+          const unreadCount = await getUnreadMessages(el.receiver, el.room);
+  
+          io.to(user.data.email).emit('notification', { room: el.room, messageCount: unreadCount }); // Emit notification event
+        }
+  
+        });
 
       io.emit("group_message", { message, timestamp, sendBy })
      
@@ -114,6 +130,18 @@ io.on('connection', (socket) => {
       console.error('Error handling chat message:', error);
     }
   });
+
+  socket.on('open_chat', async ({ userId, room }) => {
+    try {
+      await resetUnreadMessageCount(userId, room);
+  
+      const unreadCount = await getUnreadMessages(userId, room);
+      io.to(room).emit('notification', { room, messageCount: unreadCount });
+    } catch (error) {
+      console.error('Error handling chat opening:', error);
+    }
+  });
+
 
   // Handle disconnection
   socket.on('disconnect', () => {

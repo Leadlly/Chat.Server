@@ -8,6 +8,7 @@ const chatSchema = new mongoose.Schema({
   timestamp: { type: Date, default: Date.now },
   chatRoom: { type: String },
   senderName: { type: String },
+  isRead: {type: Boolean, default: false},
   chatType: String
 });
 
