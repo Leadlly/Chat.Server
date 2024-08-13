@@ -3,6 +3,7 @@ import http from 'http';
 import { Server } from 'socket.io';
 import ConnectToDB, { db } from './db';
 import chatRouter from './routes/chat.route';
+import notificationRouter from './routes/notification.route'
 import cors from 'cors';
 import expressWinston from 'express-winston'
 import winston from 'winston'
@@ -54,6 +55,7 @@ app.get('/', (req, res) => {
 
 // API routes
 app.use('/api/chat', chatRouter);
+app.use('/api/notification', notificationRouter);
 
 // Socket.IO connection handling
 io.on('connection', (socket) => {
@@ -100,6 +102,11 @@ io.on('connection', (socket) => {
       const user = await getUserInfo(receiver)
       if (user.data) {
         const unreadCount = await getUnreadMessages(receiver, room);
+
+        if(user.source === "mentors") {
+          io.to(room).emit('mentor_notification', { room, messageCount: unreadCount }); // Emit notification event
+
+        }
 
         io.to(user.data.email).emit('notification', { room, messageCount: unreadCount }); // Emit notification event
       }
