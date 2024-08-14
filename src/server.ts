@@ -14,10 +14,16 @@ import { GroupMessage } from './types'
 import { getUserInfo } from './functions/getUser';
 import { getUnreadMessages } from './functions/getUnreadMessage';
 import { resetUnreadMessageCount } from './functions/resetUnreadMessageCount';
+import { config } from 'dotenv';
+
+config({
+  path: './.env'
+})
 
 ConnectToDB();
 
 const app = express();
+const PORT = process.env.PORT;
 
 app.use(
   expressWinston.logger({
@@ -32,17 +38,18 @@ app.use(
   }),
 );
 
+console.log(process.env.MENTOR_FRONTEND_URL!, process.env.STUDENT_FRONTEND_URL!)
 
 app.use(express.json());
 app.use(cors({
-  origin:  ['http://localhost:3000', 'http://localhost:3001'],
+  origin:  [process.env.MENTOR_FRONTEND_URL!, process.env.STUDENT_FRONTEND_URL!],
   credentials: true
 }));
 
 const server = http.createServer(app);
 export const io = new Server(server, {
   cors: {
-    origin: ['http://localhost:3000', 'http://localhost:3001'],
+    origin: [process.env.MENTOR_FRONTEND_URL!, process.env.STUDENT_FRONTEND_URL!],
     methods: ['GET', 'POST'],
     credentials: true,
   },
@@ -56,6 +63,7 @@ app.get('/', (req, res) => {
 // API routes
 app.use('/api/chat', chatRouter);
 app.use('/api/notification', notificationRouter);
+
 
 // Socket.IO connection handling
 io.on('connection', (socket) => {
@@ -122,12 +130,12 @@ io.on('connection', (socket) => {
       data.forEach(async(el) => {
         io.to(el.room).emit('room_message', { message, timestamp, sendBy });
         await saveChats(sender, el.receiver, message, el.room, sendBy, "announcement")
-        const user = await getUserInfo(el.receiver)
-        if (user.data) {
-          const unreadCount = await getUnreadMessages(el.receiver, el.room);
+        // const user = await getUserInfo(el.receiver)
+        // if (user.data) {
+        //   const unreadCount = await getUnreadMessages(el.receiver, el.room);
   
-          io.to(user.data.email).emit('notification', { room: el.room, messageCount: unreadCount }); // Emit notification event
-        }
+        //   io.to(user.data.email).emit('notification', { room: el.room, messageCount: unreadCount }); // Emit notification event
+        // }
   
         });
 
@@ -148,6 +156,17 @@ io.on('connection', (socket) => {
       console.error('Error handling chat opening:', error);
     }
   });
+  
+  socket.on('mentor_open_chat', async ({ userId, room }) => {
+    try {
+      await resetUnreadMessageCount(userId, room);
+  
+      const unreadCount = await getUnreadMessages(userId, room);
+      io.to(room).emit('mentor_notification', { room, messageCount: unreadCount });
+    } catch (error) {
+      console.error('Error handling chat opening:', error);
+    }
+  });
 
 
   // Handle disconnection
@@ -156,7 +175,6 @@ io.on('connection', (socket) => {
   });
 });
 
-const PORT = 8000;
 
 app.use(errorMiddleware);
 

@@ -2,28 +2,31 @@ import { NextFunction, Request, Response } from 'express';
 import { getUnreadMessages } from '../functions/getUnreadMessage';
 import { CustomError } from '../middleware/error';
 
-interface GetUnreadNotificationsRequestBody {
-  receiver: string;
-  room: string;
-}
-
-export const getUnreadNotifications = async (req: Request<{}, {}, GetUnreadNotificationsRequestBody>, res: Response, next: NextFunction) => {
+export const getUnreadNotifications = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { receiver, room } = req.body;
+    const bodyData = req.body;
 
-    if (!receiver || !room) {
+    if (!bodyData) {
       return res.status(400).json({
         success: false,
-        message: 'Receiver and room are required fields.',
+        message: 'Body data is required.',
       });
     }
 
-    const notificationCount = await getUnreadMessages(receiver, room);
+    const unreadCount: { messageCount: number; room: string }[] = [];
 
-    console.log(notificationCount, "here is notircaiotn count")
+    for (const data of bodyData) {
+      const notificationCount = await getUnreadMessages(data.receiver, data.room);
+      unreadCount.push({
+        messageCount: notificationCount!,
+        room: data.room,
+      });
+    }
+
+    console.log(unreadCount, "here is notification count");
     res.status(200).json({
       success: true,
-      messageCount: notificationCount,
+      unreadCount,
     });
   } catch (error) {
     next(new CustomError((error as Error).message));
