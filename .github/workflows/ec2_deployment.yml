@@ -27,4 +27,4 @@ jobs:
         touch .env
         echo "${{ secrets.PROD_ENV }}" > .env
     - run: npm run build 
-    # - run: pm2 restart student-api
+    - run: pm2 restart chat-server

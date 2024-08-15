@@ -23,7 +23,7 @@ config({
 ConnectToDB();
 
 const app = express();
-const PORT = process.env.PORT;
+const PORT = parseInt(process.env.PORT!);
 
 app.use(
   expressWinston.logger({
@@ -178,6 +178,6 @@ io.on('connection', (socket) => {
 
 app.use(errorMiddleware);
 
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   logger.info(`Server listening on port ${PORT}`);
 });
