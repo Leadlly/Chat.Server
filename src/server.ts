@@ -42,14 +42,14 @@ console.log(process.env.MENTOR_FRONTEND_URL!, process.env.STUDENT_FRONTEND_URL!)
 
 app.use(express.json());
 app.use(cors({
-  origin:  [process.env.MENTOR_FRONTEND_URL!, process.env.STUDENT_FRONTEND_URL!, 'http://localhost:3000', 'http://localhost:3001'],
+  origin:  "*",
   credentials: true
 }));
 
 const server = http.createServer(app);
 export const io = new Server(server, {
   cors: {
-    origin: [process.env.MENTOR_FRONTEND_URL!, process.env.STUDENT_FRONTEND_URL!, 'http://localhost:3000', 'http://localhost:3001'],
+    origin: "*",
     methods: ['GET', 'POST'],
     credentials: true,
   },

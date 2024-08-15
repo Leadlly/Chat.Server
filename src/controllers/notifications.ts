@@ -23,7 +23,6 @@ export const getUnreadNotifications = async (req: Request, res: Response, next: 
       });
     }
 
-    console.log(unreadCount, "here is notification count");
     res.status(200).json({
       success: true,
       unreadCount,
