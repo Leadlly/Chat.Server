@@ -41,9 +41,16 @@ app.use(
 console.log(process.env.MENTOR_FRONTEND_URL!, process.env.STUDENT_FRONTEND_URL!)
 
 app.use(express.json());
+const allowedOrigins = ['http://localhost:3000', 'https://example.com']; // Replace with your actual origins
 app.use(cors({
-  origin:  "*",
-  credentials: true
+origin: (origin, callback) => {
+if (allowedOrigins.includes(origin) || !origin) {
+callback(null, true);
+} else {
+callback(new Error('Not allowed by CORS'));
+}
+},
+credentials: true
 }));
 
 const server = http.createServer(app);
